@@ -1,0 +1,89 @@
+import pandas as pd
+import numpy as np
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
+#url = "https://archive.ics.uci.edu/ml/machine-learning-databases/autos/imports-85.data"
+url = "imports-85.data"		#temp DNS error on URL
+df = pd.read_csv(url, header = None)
+
+headers = ['symboling','normalised-losses','make','fuel-type','aspiration','num-of-doors','body-style','drive-wheels','engine-location','wheel-base','length','width','height','curb-weight','engine-type','num-of-cylinders','engine-size','fuel-system','bore','stroke','compression-ratio','horsepower','peak-rpm','city-mpg','highway-mpg','price']
+df.columns=headers
+
+def numeric(header):		#converts column 'header' to numeric values (to weed out blanks)
+	df[header] = pd.to_numeric(df[header], errors = 'coerce')
+	return(df[header])
+def normalise(header):		#normalise columns
+	df[header] = (df[header] - df[header].mean())/df[header].std()
+def dummy(header):		#convert categorical variables to dummy variables (0s or 1s)
+	pd.get_dummies(df[header])
+
+numeric('price')
+df.dropna(subset=['price'], axis=0, inplace = True) #axis=0 drops row, 1 drops column. Inplace rewrites into df as if using df = this
+
+numeric('normalised-losses')
+mean_normloss = df['normalised-losses'].mean()
+df['normalised-losses'].fillna(mean_normloss, inplace=True)
+
+numeric('num-of-doors')
+numeric('num-of-cylinders')
+numeric('bore')
+numeric('stroke')
+numeric('horsepower')
+numeric('peak-rpm')
+normalise('symboling')
+normalise('normalised-losses')
+normalise('num-of-doors')
+normalise('length')
+normalise('width')
+normalise('height')
+normalise('curb-weight')
+normalise('num-of-cylinders')
+normalise('engine-size')
+normalise('bore')
+normalise('stroke')
+normalise('compression-ratio')
+normalise('horsepower')
+normalise('peak-rpm')
+normalise('city-mpg')
+normalise('highway-mpg')
+dummy('make')
+dummy('fuel-type')
+dummy('aspiration')
+dummy('body-style')
+dummy('drive-wheels')
+dummy('engine-location')
+dummy('engine-type')
+dummy('fuel-system')
+
+bins_price = np.linspace(min(df['price']),max(df['price']),4)	#separate price into 3 bins, equally spaced with 4 lines |x|x|x|
+bin_names_price = ['Low','Medium','High']			#name each bin group
+df['price-binned'] = pd.cut(df['price'],bins_price,labels=bin_names_price,include_lowest=True)								#cut price into the bins
+
+drive_wheels_counts = df['drive-wheels'].value_counts()					#count number in each category
+drive_wheels_counts.rename(columns={'drive-wheels':'value_counts'}, inplace = True)
+drive_wheels_counts.index.name = 'drive-wheels'
+
+df_test1 = df[['drive-wheels','body-style','price']]
+df_grp1 = df_test1.groupby(['drive-wheels','body-style'], as_index=False).mean()	#create table split between groups, showing average values
+df_pivot1 = df_grp1.pivot(index = 'drive-wheels', columns = 'body-style')		#pivot to have one variable in columns
+
+f1 = plt.figure(1)			#need to use figures else show() only shows one plot
+plt.boxplot(df['price'])
+f2 = plt.figure(2)
+plt.scatter(df['price'],df['engine-size'])
+f3 = plt.figure(3)
+plt.pcolor(df_pivot1)
+plt.show()				#opens windows to show plots in
+
+print (df[['price','price-binned']].head(15))
+print (df_pivot1)
+
+df.to_csv('auto.csv') #in ChromeOS, no C:\ drive to export to, so using default directory
+
+#print (df.dtypes)		#shows type, e.g. int64
+#print (df['normalised-losses'].describe(include='all')) #provides descriptive stats, remove include='all' for numeric stats only
+
+#df['symboling']=df['symboling']+1 #adds 1 to all values in smyboling column
+
+
